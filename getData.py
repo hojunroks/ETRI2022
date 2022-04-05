@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import pdb
 
+
 data_path = "/root/storage/etri_lifelog/user01-06/user01"
 dir_list = os.listdir(data_path)
 
