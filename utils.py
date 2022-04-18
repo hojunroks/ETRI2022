@@ -47,10 +47,11 @@ def top_k(logits, y, k : int = 1):
 def evaluate(model, test_data, test_label):
     model.eval()
     test_predict = model(test_data)
+    pred_act, pred_emotion = test_predict
 
     k_list = [1, 3, 5, 28]
     accu_list = []
     
     for k in k_list:
-        accu_list.append(top_k(test_predict, test_label, k))
+        accu_list.append(top_k(pred_act, test_label, k))
     return accu_list
