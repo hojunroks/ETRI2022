@@ -19,14 +19,16 @@ def main():
     ########## PARSE ARUGMENTS ###########
     parser = ArgumentParser()
     parser.add_argument('--data_dir', type=str, default="/data/etri_lifelog")
-    parser.add_argument('--person_index', type=int, default=6)
+    parser.add_argument('--person_index', type=int, default=1)
     parser.add_argument('--num_epochs', type=int, default=5000)
-    parser.add_argument('--lr', type=float, default=0.00003)
-    parser.add_argument('--weight_decay', type=float, default=0.001)
+    parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--weight_decay', type=float, default=0.0001)
     parser.add_argument('--hidden_size', type=int, default=64)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--bidirectional', type=bool, default=False)
-    parser.add_argument('--test_every', type=int, default=50)
+    parser.add_argument('--test_every', type=int, default=100)
+    parser.add_argument('--dropout', type=float, default=0.2)
+    parser.add_argument('--split_ratio', type=float, default=0.67)
     args = parser.parse_args()
 
     ############## LOAD DATA ##############
@@ -36,7 +38,7 @@ def main():
         person_dir_index += 1
     data_path="user{0:02d}-{1:02d}/user{2:02d}".format(PERSON_DIRS[person_dir_index-1]+1, PERSON_DIRS[person_dir_index], args.person_index)
     print(data_path)
-    train_feat, train_label, test_feat, test_label = load_data(os.path.join(args.data_dir, data_path), input_flag="multi")  # act_place_emo
+    train_feat, train_label, test_feat, test_label = load_data(os.path.join(args.data_dir, data_path), split_ratio=args.split_ratio, input_flag="multi")  # act_place_emo
     
     label_act_train, label_emotion_train = train_label
     label_act_test, label_emotion_test = test_label
@@ -45,7 +47,7 @@ def main():
     ########### INITIALIZE MODEL ###########
     input_size = train_feat.shape[-1]
     num_classes = train_feat.shape[-1]
-    lstm = LSTM(num_classes, input_size, args.hidden_size, args.num_layers, bidirectional_flag=args.bidirectional)
+    lstm = LSTM(num_classes, input_size, args.hidden_size, args.num_layers, bidirectional_flag=args.bidirectional, dropout=args.dropout)
     #classfication
     criterion = nn.CrossEntropyLoss()
     criterion_emotion = nn.L1Loss() # L2 or HuberLoss()
@@ -74,8 +76,8 @@ def main():
         # Logs
         writer.add_scalar("Loss/train", loss_act, epoch)
 
-        writer.add_scalar("Accuracy/train/top-5", accuracy[2], epoch)
-        writer.add_scalar("Accuracy/train/top-3", accuracy[1], epoch)
+        writer.add_scalar("Accuracy/train/top-10", accuracy[2], epoch)
+        writer.add_scalar("Accuracy/train/top-5", accuracy[1], epoch)
         writer.add_scalar("Accuracy/train/top-1", accuracy[0], epoch)
         writer.add_scalar("Accuracy/train/emotion", loss_emotion, epoch)
         
@@ -88,8 +90,8 @@ def main():
                 loss_emotion_test = criterion_emotion(pred_emotion, label_emotion_test.unsqueeze(dim=1)/10.)
                 accuracy_test = np.array(evaluate(lstm, test_feat, label_act_test))
                 writer.add_scalar("Loss/test", loss_act_test, epoch)
-                writer.add_scalar("Accuracy/test/top-5", accuracy_test[2], epoch)
-                writer.add_scalar("Accuracy/test/top-3", accuracy_test[1], epoch)
+                writer.add_scalar("Accuracy/test/top-10", accuracy_test[2], epoch)
+                writer.add_scalar("Accuracy/test/top-5", accuracy_test[1], epoch)
                 writer.add_scalar("Accuracy/test/top-1", accuracy_test[0], epoch)
                 
                 writer.add_scalar("Accuracy/test/emotion", loss_emotion_test, epoch)

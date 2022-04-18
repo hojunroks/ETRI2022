@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 class LSTM(nn.Module):
-    def __init__(self, num_classes, input_size, hidden_size, num_layers, bidirectional_flag, emo_classes=1):
+    def __init__(self, num_classes, input_size, hidden_size, num_layers, bidirectional_flag, dropout=0.2, emo_classes=1):
         super(LSTM, self).__init__()
         
         self.num_classes = num_classes
@@ -12,6 +12,7 @@ class LSTM(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bidirectional_flag = bidirectional_flag
+        self.dropout = dropout
         #self.seq_length = seq_length
         
         if self.bidirectional_flag == True:
@@ -19,7 +20,7 @@ class LSTM(nn.Module):
         else:
             self.D = 1
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
-                            num_layers=num_layers, batch_first=True, bidirectional=bidirectional_flag, dropout=0.2)
+                            num_layers=num_layers, batch_first=True, bidirectional=bidirectional_flag, dropout=self.dropout)
         
         self.fc_act = nn.Linear(hidden_size*self.D, num_classes)
         self.fc_emotion = nn.Linear(hidden_size*self.D, self.num_emotion_classes)

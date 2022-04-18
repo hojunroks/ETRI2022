@@ -5,7 +5,7 @@ from torch.autograd import Variable
 import torch
 import numpy as np
 
-def load_data(data_path, input_flag="multi"):
+def load_data(data_path, split_ratio=0.67, input_flag="multi"):
     dir_list = os.listdir(data_path)
     user_all_data = []
 
@@ -37,7 +37,7 @@ def load_data(data_path, input_flag="multi"):
     onehot_emotion = indexToOneHot(dfToTensor(df_sort,['emotionPositive']))[0]
 
     num_data = len(onehot_actopt)
-    train_size = int(num_data*0.67)
+    train_size = int(num_data*split_ratio)
     test_size = num_data-train_size
 
     actopt_feat_train = Variable(torch.Tensor(np.array(onehot_actopt[0:train_size-1])))

@@ -49,7 +49,7 @@ def evaluate(model, test_data, test_label):
     test_predict = model(test_data)
     pred_act, pred_emotion = test_predict
 
-    k_list = [1, 3, 5, 28]
+    k_list = [1, 5, 10, 28]
     accu_list = []
     
     for k in k_list:
