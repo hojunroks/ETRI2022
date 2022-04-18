@@ -49,9 +49,9 @@ def evaluate(model, test_data, test_label):
     test_predict = model(test_data)
     pred_act, pred_emotion = test_predict
 
-    k_list = [1, 5, 10, 28]
+    k_list = [1, 5, 10]
     accu_list = []
     
     for k in k_list:
-        accu_list.append(top_k(pred_act, test_label, k))
+        accu_list.append(top_k(pred_act.cpu(), test_label.cpu(), k))
     return accu_list

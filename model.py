@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 class LSTM(nn.Module):
-    def __init__(self, num_classes, input_size, hidden_size, num_layers, bidirectional_flag, dropout=0.2, emo_classes=1):
+    def __init__(self, num_classes, input_size, hidden_size, num_layers, bidirectional_flag, dropout=0.2, emo_classes=1, device=0):
         super(LSTM, self).__init__()
         
         self.num_classes = num_classes
@@ -13,6 +13,7 @@ class LSTM(nn.Module):
         self.hidden_size = hidden_size
         self.bidirectional_flag = bidirectional_flag
         self.dropout = dropout
+        self.device = device
         #self.seq_length = seq_length
         
         if self.bidirectional_flag == True:
@@ -28,9 +29,9 @@ class LSTM(nn.Module):
 
     def forward(self, x):
         h_0 = Variable(torch.zeros(
-            self.D * self.num_layers, x.size(0), self.hidden_size))
+            self.D * self.num_layers, x.size(0), self.hidden_size)).to(self.device)
         c_0 = Variable(torch.zeros(
-            self.D * self.num_layers, x.size(0), self.hidden_size))
+            self.D * self.num_layers, x.size(0), self.hidden_size)).to(self.device)
         
         # Propagate input through LSTM
         ula, (h_out, _) = self.lstm(x, (h_0, c_0))

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import os
-from data import load_data
+from data import load_data, load_data_sequential
 from argparse import ArgumentParser
 from utils import evaluate
 from torch.utils.tensorboard import SummaryWriter
@@ -23,11 +23,11 @@ def main():
     parser.add_argument('--num_epochs', type=int, default=5000)
     parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--weight_decay', type=float, default=0.0001)
-    parser.add_argument('--hidden_size', type=int, default=64)
+    parser.add_argument('--hidden_size', type=int, default=128)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--bidirectional', type=bool, default=False)
     parser.add_argument('--test_every', type=int, default=100)
-    parser.add_argument('--dropout', type=float, default=0.2)
+    parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--split_ratio', type=float, default=0.67)
     args = parser.parse_args()
 
@@ -38,19 +38,25 @@ def main():
         person_dir_index += 1
     data_path="user{0:02d}-{1:02d}/user{2:02d}".format(PERSON_DIRS[person_dir_index-1]+1, PERSON_DIRS[person_dir_index], args.person_index)
     print(data_path)
-    train_feat, train_label, test_feat, test_label = load_data(os.path.join(args.data_dir, data_path), split_ratio=args.split_ratio, input_flag="multi")  # act_place_emo
-    
-    label_act_train, label_emotion_train = train_label
-    label_act_test, label_emotion_test = test_label
+    # train_feat, train_label, test_feat, test_label = load_data(os.path.join(args.data_dir, data_path), split_ratio=args.split_ratio, input_flag="multi")  # act_place_emo
+    data_path = os.path.join(args.data_dir, data_path)
+    train_feat, train_label, train_label_emotion, test_feat, test_label, test_label_emotion = load_data_sequential(data_path, split_ratio=args.split_ratio)
+    with torch.cuda.device(0):
+        train_feat = train_feat.cuda()
+        test_feat = test_feat.cuda()
+        label_act_train = train_label.cuda() # label_emotion_train
+        label_act_test = test_label.cuda() # label_emotion_test
+        label_emotion_train = train_label_emotion.cuda()
+        label_emotion_test = test_label_emotion.cuda()
 
 
     ########### INITIALIZE MODEL ###########
     input_size = train_feat.shape[-1]
     num_classes = train_feat.shape[-1]
-    lstm = LSTM(num_classes, input_size, args.hidden_size, args.num_layers, bidirectional_flag=args.bidirectional, dropout=args.dropout)
+    lstm = LSTM(num_classes, input_size, args.hidden_size, args.num_layers, bidirectional_flag=args.bidirectional, dropout=args.dropout).to(0)
     #classfication
     criterion = nn.CrossEntropyLoss()
-    criterion_emotion = nn.L1Loss() # L2 or HuberLoss()
+    criterion_emotion = nn.HuberLoss() # L1Loss or HuberLoss()
     optimizer = torch.optim.Adam(lstm.parameters(), lr=args.lr, weight_decay = args.weight_decay)
 
     now = datetime.datetime.now()
@@ -63,14 +69,17 @@ def main():
     # Train the model
     for epoch in range(args.num_epochs):
         lstm.train()
+        
         outputs = lstm(train_feat)
         out_act, out_emotion = outputs
         
         optimizer.zero_grad()
+        
         loss_act = criterion(out_act, label_act_train)     #trainY one-hot index
-        loss_emotion = criterion_emotion(out_emotion, label_emotion_train.unsqueeze(dim=1)/10.)     #trainY one-hot index
+        loss_emotion = criterion_emotion(out_emotion.squeeze(), label_emotion_train/10.)
         (loss_act + loss_emotion).backward()
         optimizer.step()
+        
         accuracy = np.array(evaluate(lstm, train_feat, label_act_train))
         
         # Logs
@@ -87,7 +96,7 @@ def main():
                 test_pred = lstm(test_feat)
                 pred_act, pred_emotion = test_pred
                 loss_act_test = criterion(pred_act, label_act_test)
-                loss_emotion_test = criterion_emotion(pred_emotion, label_emotion_test.unsqueeze(dim=1)/10.)
+                loss_emotion_test = criterion_emotion(pred_emotion.squeeze(), label_emotion_test/10.)
                 accuracy_test = np.array(evaluate(lstm, test_feat, label_act_test))
                 writer.add_scalar("Loss/test", loss_act_test, epoch)
                 writer.add_scalar("Accuracy/test/top-10", accuracy_test[2], epoch)
