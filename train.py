@@ -76,7 +76,7 @@ def main():
         optimizer.zero_grad()
         
         loss_act = criterion(out_act, label_act_train)     #trainY one-hot index
-        loss_emotion = criterion_emotion(out_emotion.squeeze(), label_emotion_train/10.)
+        loss_emotion = criterion_emotion(out_emotion.squeeze(), label_emotion_train/7.)
         (loss_act + loss_emotion).backward()
         optimizer.step()
         
@@ -96,7 +96,7 @@ def main():
                 test_pred = lstm(test_feat)
                 pred_act, pred_emotion = test_pred
                 loss_act_test = criterion(pred_act, label_act_test)
-                loss_emotion_test = criterion_emotion(pred_emotion.squeeze(), label_emotion_test/10.)
+                loss_emotion_test = criterion_emotion(pred_emotion.squeeze(), label_emotion_test/7.)
                 accuracy_test = np.array(evaluate(lstm, test_feat, label_act_test))
                 writer.add_scalar("Loss/test", loss_act_test, epoch)
                 writer.add_scalar("Accuracy/test/top-10", accuracy_test[2], epoch)
