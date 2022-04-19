@@ -87,8 +87,8 @@ def main():
         # Logs
         writer.add_scalar("Loss/train", loss_act, epoch)
 
-        writer.add_scalar("Accuracy/train/top-10", accuracy[2], epoch)
-        writer.add_scalar("Accuracy/train/top-5", accuracy[1], epoch)
+        writer.add_scalar("Accuracy/train/top-5", accuracy[2], epoch)
+        writer.add_scalar("Accuracy/train/top-3", accuracy[1], epoch)
         writer.add_scalar("Accuracy/train/top-1", accuracy[0], epoch)
         writer.add_scalar("Accuracy/train/emotion", loss_emotion, epoch)
         
@@ -101,8 +101,8 @@ def main():
                 loss_emotion_test = criterion_emotion(pred_emotion.squeeze(), label_emotion_test)
                 accuracy_test = np.array(evaluate(lstm, test_feat, label_act_test))
                 writer.add_scalar("Loss/test", loss_act_test, epoch)
-                writer.add_scalar("Accuracy/test/top-10", accuracy_test[2], epoch)
-                writer.add_scalar("Accuracy/test/top-5", accuracy_test[1], epoch)
+                writer.add_scalar("Accuracy/test/top-5", accuracy_test[2], epoch)
+                writer.add_scalar("Accuracy/test/top-3", accuracy_test[1], epoch)
                 writer.add_scalar("Accuracy/test/top-1", accuracy_test[0], epoch)
                 
                 writer.add_scalar("Accuracy/test/emotion", loss_emotion_test, epoch)
