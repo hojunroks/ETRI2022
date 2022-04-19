@@ -118,7 +118,7 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_ti
     # onehot_actopt = indexToOneHot(dfToTensor(df_sort,['actionOption']))[0]
     onehot_act = indexToOneHot(dfToTensor(df_sort,['action']))[0]
     onehot_place = indexToOneHot(dfToTensor(df_sort,['place']))[0]
-    onehot_emotion = indexToOneHot(dfToTensor(df_sort,['emotionPositive']))[0]
+    raw_emotion = torch.from_numpy(np.array(df_sort['emotionPositive'] / 7.)).unsqueeze(dim=1)
     onehot_weekend = indexToOneHot(dfToTensor(df_sort,['is_weekend']))[0]
     # onehot_time = indexToOneHot(dfToTensor(df_sort,['time']))[0]
     time = torch.Tensor([(x.hour/12-1) for x in list(df_all['ts'])])
@@ -126,10 +126,11 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_ti
     # emotion_label = torch.argmax(Variable(torch.Tensor(np.array(onehot_emotion[1:]))), dim=-1)
     
     if use_timestamp:
-        data = (onehot_act, onehot_place, onehot_emotion, onehot_weekend, time)
+        data = (onehot_act, onehot_place, raw_emotion, onehot_weekend, time)
     else:
-        data = (onehot_act, onehot_place, onehot_emotion)
-    x, y, y_emotion = sliding_window(data, onehot_act[1:], onehot_emotion[1:], seq_length=3)
+        data = (onehot_act, onehot_place, raw_emotion)
+    x, y, y_emotion = sliding_window(data, onehot_act[1:], raw_emotion[1:], seq_length=3)
+
     
     num_data = len(x)
     train_size = int(num_data*split_ratio)
@@ -137,11 +138,11 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_ti
 
     trainX = Variable(torch.Tensor(np.array(x[0:train_size]))).unsqueeze(dim=0)
     trainY = Variable(torch.Tensor(np.array(y[0:train_size]))).long()
-    trainY_emotion = Variable(torch.Tensor(np.array(y_emotion[0:train_size]))).long()
+    trainY_emotion = Variable(torch.Tensor(np.array(y_emotion[0:train_size]))).float()
 
     testX = Variable(torch.Tensor(np.array(x[train_size:len(x)]))).unsqueeze(dim=0)
     testY = Variable(torch.Tensor(np.array(y[train_size:len(y)]))).long()
-    testY_emotion = Variable(torch.Tensor(np.array(y_emotion[train_size:len(y_emotion)]))).long()
+    testY_emotion = Variable(torch.Tensor(np.array(y_emotion[train_size:len(y_emotion)]))).float()
     
     return trainX, trainY, trainY_emotion, testX, testY, testY_emotion
     
@@ -157,7 +158,7 @@ def sliding_window(data, label, label_emotion, seq_length):
             seq_list += [data[j][i+k] for j in range(len(data))]
             
         _y = torch.argmax(Variable(torch.Tensor(np.array(label[i+seq_length]))), dim=-1)
-        _y_emotion = torch.argmax(Variable(torch.Tensor(np.array(label_emotion[i+seq_length]))), dim=-1)
+        _y_emotion = Variable(torch.Tensor(np.array(label_emotion[i+seq_length])))
         x.append(torch.cat(seq_list).numpy())
         y.append(_y)
         y_emotion.append(_y_emotion)
