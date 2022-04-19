@@ -29,6 +29,7 @@ def main():
     parser.add_argument('--test_every', type=int, default=100)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--split_ratio', type=float, default=0.67)
+    parser.add_argument('--use_timestamp', type=bool, default=False)
     args = parser.parse_args()
 
     ############## LOAD DATA ##############

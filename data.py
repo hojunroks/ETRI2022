@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from utils import dfToTensor, indexToOneHot
+from utils import dfToTensor, indexToOneHot, hourToLabel
 from torch.autograd import Variable
 import torch
 import numpy as np
@@ -22,6 +22,7 @@ def load_data(data_path, split_ratio=0.67, input_flag="multi"):
     df_all['ts']=pd.to_datetime(df_all['ts'], unit='s')
     df_all['is_weekend']=df_all.apply(lambda x: x['ts'].weekday()>=5, axis=1)
     df_all['ampm']=df_all.apply(lambda x: ["AM","PM"][x['ts'].hour//12], axis=1)
+    df_all['time']=df_all.apply(lambda x: hourToLabel(x['ts'].hour), axis=1)
 
     df_no_dup = df_all.drop_duplicates()
     #df_sort : 연속된 동일한 actionOption끼리 묶음
@@ -38,6 +39,8 @@ def load_data(data_path, split_ratio=0.67, input_flag="multi"):
     onehot_actopt = indexToOneHot(dfToTensor(df_sort,['action']))[0]
     onehot_place = indexToOneHot(dfToTensor(df_sort,['place']))[0]
     onehot_emotion = indexToOneHot(dfToTensor(df_sort,['emotionPositive']))[0]
+    onehot_weekend = indexToOneHot(dfToTensor(df_sort,['is_weekend']))[0]
+    onehot_time = indexToOneHot(dfToTensor(df_sort,['time']))[0]
 
     num_data = len(onehot_actopt)
     train_size = int(num_data*split_ratio)
@@ -84,7 +87,7 @@ def load_data(data_path, split_ratio=0.67, input_flag="multi"):
     return train_feat, train_label, test_feat, test_label
 
 
-def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi"):
+def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_timestamp=False):
     dir_list = os.listdir(data_path)
     user_all_data = []
 
@@ -99,6 +102,7 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi"):
     df_all['ts']=pd.to_datetime(df_all['ts'], unit='s')
     df_all['is_weekend']=df_all.apply(lambda x: x['ts'].weekday()>=5, axis=1)
     df_all['ampm']=df_all.apply(lambda x: ["AM","PM"][x['ts'].hour//12], axis=1)
+    df_all['time']=df_all.apply(lambda x: hourToLabel(x['ts'].hour), axis=1)
 
     df_no_dup = df_all.drop_duplicates()
     #df_sort : 연속된 동일한 actionOption끼리 묶음
@@ -115,10 +119,15 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi"):
     onehot_act = indexToOneHot(dfToTensor(df_sort,['action']))[0]
     onehot_place = indexToOneHot(dfToTensor(df_sort,['place']))[0]
     onehot_emotion = indexToOneHot(dfToTensor(df_sort,['emotionPositive']))[0]
+    onehot_weekend = indexToOneHot(dfToTensor(df_sort,['is_weekend']))[0]
+    onehot_time = indexToOneHot(dfToTensor(df_sort,['time']))[0]
     
     # emotion_label = torch.argmax(Variable(torch.Tensor(np.array(onehot_emotion[1:]))), dim=-1)
     
-    data = (onehot_act, onehot_place, onehot_emotion)
+    if use_timestamp:
+        data = (onehot_act, onehot_place, onehot_emotion, onehot_weekend, onehot_time)
+    else:
+        data = (onehot_act, onehot_place, onehot_emotion)
     x, y, y_emotion = sliding_window(data, onehot_act[1:], onehot_emotion[1:], seq_length=3)
     
     num_data = len(x)

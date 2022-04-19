@@ -55,3 +55,13 @@ def evaluate(model, test_data, test_label):
     for k in k_list:
         accu_list.append(top_k(pred_act.cpu(), test_label.cpu(), k))
     return accu_list
+
+def hourToLabel(hour):
+    if hour<=9:
+        return "Dawn"
+    elif hour<=12:
+        return "Morning"
+    elif hour<=18:
+        return "Afternoon"
+    else:
+        return "Evening"
