@@ -22,7 +22,7 @@ def main():
     parser.add_argument('--person_index', type=int, default=1)
     parser.add_argument('--num_epochs', type=int, default=5000)
     parser.add_argument('--lr', type=float, default=0.0001)
-    parser.add_argument('--weight_decay', type=float, default=0.01)
+    parser.add_argument('--weight_decay', type=float, default=0.001)
     parser.add_argument('--hidden_size', type=int, default=128)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--bidirectional', type=bool, default=False)
