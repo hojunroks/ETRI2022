@@ -25,6 +25,7 @@ class LSTM(nn.Module):
         
         self.fc_act = nn.Linear(hidden_size*self.D, num_classes)
         self.fc_emotion = nn.Linear(hidden_size*self.D, self.num_emotion_classes)
+        
 
 
     def forward(self, x):

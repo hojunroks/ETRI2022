@@ -120,12 +120,13 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_ti
     onehot_place = indexToOneHot(dfToTensor(df_sort,['place']))[0]
     onehot_emotion = indexToOneHot(dfToTensor(df_sort,['emotionPositive']))[0]
     onehot_weekend = indexToOneHot(dfToTensor(df_sort,['is_weekend']))[0]
-    onehot_time = indexToOneHot(dfToTensor(df_sort,['time']))[0]
+    # onehot_time = indexToOneHot(dfToTensor(df_sort,['time']))[0]
+    time = torch.Tensor([(x.hour/12-1) for x in list(df_all['ts'])])
     
     # emotion_label = torch.argmax(Variable(torch.Tensor(np.array(onehot_emotion[1:]))), dim=-1)
     
     if use_timestamp:
-        data = (onehot_act, onehot_place, onehot_emotion, onehot_weekend, onehot_time)
+        data = (onehot_act, onehot_place, onehot_emotion, onehot_weekend, time)
     else:
         data = (onehot_act, onehot_place, onehot_emotion)
     x, y, y_emotion = sliding_window(data, onehot_act[1:], onehot_emotion[1:], seq_length=3)
