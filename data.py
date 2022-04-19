@@ -87,7 +87,7 @@ def load_data(data_path, split_ratio=0.67, input_flag="multi"):
     return train_feat, train_label, test_feat, test_label
 
 
-def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_timestamp=False):
+def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_timestamp=True):
     dir_list = os.listdir(data_path)
     user_all_data = []
 
@@ -122,7 +122,7 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_ti
     onehot_weekend = indexToOneHot(dfToTensor(df_sort,['is_weekend']))[0]
     # onehot_time = indexToOneHot(dfToTensor(df_sort,['time']))[0]
     time = torch.Tensor([(x.hour/12-1) for x in list(df_all['ts'])])
-    
+    pdb.set_trace()
     # emotion_label = torch.argmax(Variable(torch.Tensor(np.array(onehot_emotion[1:]))), dim=-1)
     
     if use_timestamp:
