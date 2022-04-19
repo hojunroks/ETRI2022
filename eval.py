@@ -62,7 +62,9 @@ def main():
 
     best_accuracy = 0.
     # Train the model
-    
+    f = open("USER1.txt", 'w')
+
+
     with torch.no_grad():
         # lstm.eval()
         test_pred = lstm(test_feat)
@@ -72,15 +74,24 @@ def main():
         accuracy_test = np.array(evaluate(lstm, test_feat, label_act_test))
         
         for i in range(len(pred_act)):
+            print("action pred:")
+            f.write("\naction pred:")
             print(pred_act[i].cpu().numpy())
-            print(label_act_test[i].cpu().numpy())
-            print(pred_emotion[i].cpu().numpy())
-            print(label_emotion_test[i].cpu().numpy())
+            f.write(str(pred_act[i].cpu().numpy())+"\n")
+            print("action label: "+str(label_act_test[i].cpu().numpy()))
+            f.write("action label: "+str(label_act_test[i].cpu().numpy())+"\n")
+            print("emotion pred: "+ str(pred_emotion[i].cpu().numpy()[0]))
+            f.write("emotion pred: "+ str(pred_emotion[i].cpu().numpy()[0])+"\n")
+            print("emotion label: "+str(label_emotion_test[i].cpu().numpy()))
+            f.write("emotion label: "+str(label_emotion_test[i].cpu().numpy())+"\n")
             
             
             print("\n")
         
         print(accuracy_test[1])
+        f.write(str(accuracy_test[1])+"% \n")
+        
+        f.close()
         # writer.add_scalar("Loss/test", loss_act_test, epoch)
         # writer.add_scalar("Accuracy/test/top-10", accuracy_test[2], epoch)
         # writer.add_scalar("Accuracy/test/top-5", accuracy_test[1], epoch)
