@@ -119,9 +119,9 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_ti
     onehot_act = indexToOneHot(dfToTensor(df_sort,['action']))[0]
     onehot_place = indexToOneHot(dfToTensor(df_sort,['place']))[0]
     raw_emotion = torch.from_numpy(np.array(df_sort['emotionPositive'] / 7.)).unsqueeze(dim=1)
-    onehot_weekend = indexToOneHot(dfToTensor(df_sort,['is_weekend']))[0]
+    onehot_weekend = torch.unsqueeze(dfToTensor(df_sort,['is_weekend'])[0], dim=1)
     # onehot_time = indexToOneHot(dfToTensor(df_sort,['time']))[0]
-    time = torch.Tensor([(x.hour/12-1) for x in list(df_all['ts'])])
+    time = torch.unsqueeze(torch.Tensor([(x.hour/12-1) for x in list(df_sort['ts'])]), dim=1)
     pdb.set_trace()
     # emotion_label = torch.argmax(Variable(torch.Tensor(np.array(onehot_emotion[1:]))), dim=-1)
     
