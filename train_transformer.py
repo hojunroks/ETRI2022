@@ -53,11 +53,11 @@ def main():
     ########### INITIALIZE MODEL ###########
     input_size = train_feat.shape[-1]
     num_classes = 16    # train_feat.shape[-1]
-    lstm = LSTM(num_classes, input_size, args.hidden_size, args.num_layers, bidirectional_flag=args.bidirectional, dropout=args.dropout).to(0)
+    model = TransformerBased(input_size, 32, 8, 64, 8, num_classes)
     #classfication
     criterion = nn.CrossEntropyLoss()
     criterion_emotion = nn.HuberLoss() # L1Loss or HuberLoss()
-    optimizer = torch.optim.Adam(lstm.parameters(), lr=args.lr, weight_decay = args.weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay = args.weight_decay)
 
     now = datetime.datetime.now()
     nowDate = now.strftime('%Y-%m-%d-%H:%M:%S')
@@ -69,9 +69,9 @@ def main():
     best_accuracy = 0.
     # Train the model
     for epoch in range(args.num_epochs):
-        lstm.train()
+        model.train()
         
-        outputs = lstm(train_feat)
+        outputs = model(train_feat)
         out_act, out_emotion = outputs
         
         optimizer.zero_grad()
@@ -82,7 +82,7 @@ def main():
         (loss_act + loss_emotion).backward()
         optimizer.step()
         
-        accuracy = np.array(evaluate(lstm, train_feat, label_act_train))
+        accuracy = np.array(evaluate(model, train_feat, label_act_train))
         
         # Logs
         writer.add_scalar("Loss/train", loss_act, epoch)
@@ -94,12 +94,12 @@ def main():
         
         if epoch % args.test_every == 0:
             with torch.no_grad():
-                lstm.eval()
-                test_pred = lstm(test_feat)
+                model.eval()
+                test_pred = model(test_feat)
                 pred_act, pred_emotion = test_pred
                 loss_act_test = criterion(pred_act, label_act_test)
                 loss_emotion_test = criterion_emotion(pred_emotion.squeeze(), label_emotion_test)
-                accuracy_test = np.array(evaluate(lstm, test_feat, label_act_test))
+                accuracy_test = np.array(evaluate(model, test_feat, label_act_test))
                 writer.add_scalar("Loss/test", loss_act_test, epoch)
                 writer.add_scalar("Accuracy/test/top-5", accuracy_test[2], epoch)
                 writer.add_scalar("Accuracy/test/top-3", accuracy_test[1], epoch)
@@ -111,7 +111,7 @@ def main():
                 best_accuracy = accuracy[0]
                 save_dict = {
                         "epoch": epoch,
-                        "model_state_dict": lstm.state_dict(),
+                        "model_state_dict": model.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
                         "accuracy": best_accuracy,
                     }

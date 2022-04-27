@@ -1,6 +1,8 @@
+import math
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 class LSTM(nn.Module):
     def __init__(self, num_classes, input_size, hidden_size, num_layers, bidirectional_flag, dropout=0.2, emo_classes=1, device=0):
@@ -46,3 +48,60 @@ class LSTM(nn.Module):
         out_emotion = self.fc_emotion(ula)
         out = out_act, out_emotion
         return out
+
+
+class TransformerBased(nn.Module):
+    def __init__(self, input_size: int, d_model: int, nhead: int, d_hid: int,
+                nlayers: int, num_actions: int, dropout: float = 0.5):
+        super().__init__()
+        self.model_type = 'Transformer'
+        self.pos_encoder = PositionalEncoding(d_model, dropout)
+        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+        self.encoder = nn.Linear(input_size, d_model)
+        self.d_model = d_model
+        self.decoder_action = nn.Linear(d_model, num_actions)
+        self.decoder_emotion = nn.Linear(d_model, 1)
+
+        self.init_weights()
+
+    def forward(self, src, src_mask):
+        """
+        Args:
+            src: Tensor, shape [seq_len, batch_size]
+            src_mask: Tensor, shape [seq_len, seq_len]
+
+        """
+        src = self.encoder(src) * math.sqrt(self.d_model)
+        src = self.pos_encoder(src)
+        output = self.transformer_encoder(src, src_mask)
+        output_action = self.decoder_action(output)
+        output_emotion = self.decoder_emotion(output)
+        return output_action, output_emotion
+
+
+def generate_square_subsequent_mask(sz: int):
+    """Generates an upper-triangular matrix of -inf, with zeros on diag."""
+    return torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
+
+
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(max_len, 1, d_model)
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        """
+        Args:
+            x: Tensor, shape [seq_len, batch_size, embedding_dim]
+        """
+        x = x + self.pe[:x.size(0)]
+        return self.dropout(x)
