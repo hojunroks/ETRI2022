@@ -1,10 +1,10 @@
-from model import LSTM, TransformerBased
+from model import LSTM, TransformerBased, generate_square_subsequent_mask
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import numpy as np
 import os
-from data import load_data, load_data_sequential
+from data import load_data, load_data_sequential, load_data_transformer
 from argparse import ArgumentParser
 from utils import evaluate
 from torch.utils.tensorboard import SummaryWriter
@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--split_ratio', type=float, default=0.67)
     parser.add_argument('--use_timestamp', type=bool, default=False)
+    parser.add_argument('--sequence_length', type=int, default=10)
     args = parser.parse_args()
 
     ############## LOAD DATA ##############
@@ -41,7 +42,7 @@ def main():
     print(data_path)
     # train_feat, train_label, test_feat, test_label = load_data(os.path.join(args.data_dir, data_path), split_ratio=args.split_ratio, input_flag="multi")  # act_place_emo
     data_path = os.path.join(args.data_dir, data_path)
-    train_feat, train_label, train_label_emotion, test_feat, test_label, test_label_emotion = load_data_sequential(data_path, split_ratio=args.split_ratio)
+    train_feat, train_label, train_label_emotion, test_feat, test_label, test_label_emotion = load_data_transformer(data_path, split_ratio=args.split_ratio)
     with torch.cuda.device(0):
         train_feat = train_feat.cuda()
         test_feat = test_feat.cuda()
@@ -53,7 +54,7 @@ def main():
     ########### INITIALIZE MODEL ###########
     input_size = train_feat.shape[-1]
     num_classes = 16    # train_feat.shape[-1]
-    model = TransformerBased(input_size, 32, 8, 64, 8, num_classes)
+    model = TransformerBased(input_size, 32, 8, 64, 8, num_classes).to('cuda:0')
     #classfication
     criterion = nn.CrossEntropyLoss()
     criterion_emotion = nn.HuberLoss() # L1Loss or HuberLoss()
@@ -70,53 +71,69 @@ def main():
     # Train the model
     for epoch in range(args.num_epochs):
         model.train()
-        
-        outputs = model(train_feat)
-        out_act, out_emotion = outputs
-        
-        optimizer.zero_grad()
-        
-        loss_act = criterion(out_act, label_act_train)     #trainY one-hot index
-        
-        loss_emotion = criterion_emotion(out_emotion.squeeze(), label_emotion_train)
-        (loss_act + loss_emotion).backward()
-        optimizer.step()
-        
-        accuracy = np.array(evaluate(model, train_feat, label_act_train))
-        
-        # Logs
-        writer.add_scalar("Loss/train", loss_act, epoch)
+        src_mask = generate_square_subsequent_mask(args.sequence_length).to('cuda:0')
+        loss_act_total = []
+        loss_emotion_total = []
+        accuracy_total = []
+        for i in range(len(train_feat)):
+            train_batch = train_feat[i].unsqueeze(dim=1)
+            outputs = model(train_batch, src_mask)
+            out_act, out_emotion = outputs
 
-        writer.add_scalar("Accuracy/train/top-5", accuracy[2], epoch)
-        writer.add_scalar("Accuracy/train/top-3", accuracy[1], epoch)
-        writer.add_scalar("Accuracy/train/top-1", accuracy[0], epoch)
-        writer.add_scalar("Accuracy/train/emotion", loss_emotion, epoch)
+            optimizer.zero_grad()
+
+            loss_act = criterion(out_act, label_act_train[i].type(torch.LongTensor).to('cuda:0'))     #trainY one-hot index
+            loss_act_total.append(loss_act.item())
+            loss_emotion = criterion_emotion(out_emotion.squeeze(), label_emotion_train[i])
+            loss_emotion_total.append(loss_emotion.item())
+            (loss_act + loss_emotion).backward()
+            optimizer.step()
+        
+            accuracy = np.array(evaluate(model, train_feat[i].unsqueeze(dim=1), label_act_train[i].type(torch.LongTensor).to('cuda:0'), args.sequence_length))
+            accuracy_total.append(accuracy)
+            # Logs
+        loss_act_total = np.array(loss_act_total)
+        loss_emotion_total = np.array(loss_emotion_total)
+        accuracy_total = np.mean(np.array(accuracy_total), axis=0)
+        writer.add_scalar("Loss/train", loss_act_total.mean(), epoch)
+
+        writer.add_scalar("Accuracy/train/top-5", accuracy_total[2], epoch)
+        writer.add_scalar("Accuracy/train/top-3", accuracy_total[1], epoch)
+        writer.add_scalar("Accuracy/train/top-1", accuracy_total[0], epoch)
+        writer.add_scalar("Accuracy/train/emotion", loss_emotion_total.mean(), epoch)
         
         if epoch % args.test_every == 0:
             with torch.no_grad():
                 model.eval()
-                test_pred = model(test_feat)
-                pred_act, pred_emotion = test_pred
-                loss_act_test = criterion(pred_act, label_act_test)
-                loss_emotion_test = criterion_emotion(pred_emotion.squeeze(), label_emotion_test)
-                accuracy_test = np.array(evaluate(model, test_feat, label_act_test))
-                writer.add_scalar("Loss/test", loss_act_test, epoch)
+                loss_act_test=[]
+                loss_emotion_test=[]
+                accuracy_test=[]
+                for i in range(len(test_feat)):
+                    test_pred = model(test_feat[i].unsqueeze(dim=1), src_mask)
+                    pred_act, pred_emotion = test_pred
+                    loss_act_test.append(criterion(pred_act, label_act_test[i].type(torch.LongTensor).to('cuda:0')).item())
+                    loss_emotion_test.append(criterion_emotion(pred_emotion.squeeze(), label_emotion_test[i]).item())
+                    accuracy_test.append(np.array(evaluate(model, test_feat[i].unsqueeze(dim=1), label_act_test[i].type(torch.LongTensor).to('cuda:0'), args.sequence_length)))
+                accuracy_test = np.mean(np.array(accuracy_test), axis=0)
+                loss_act_test = np.array(loss_act_test)
+                loss_emotion_test = np.array(loss_emotion_test)
+                writer.add_scalar("Loss/test", loss_act_test.mean(), epoch)
                 writer.add_scalar("Accuracy/test/top-5", accuracy_test[2], epoch)
                 writer.add_scalar("Accuracy/test/top-3", accuracy_test[1], epoch)
                 writer.add_scalar("Accuracy/test/top-1", accuracy_test[0], epoch)
                 
-                writer.add_scalar("Accuracy/test/emotion", loss_emotion_test, epoch)
+                writer.add_scalar("Accuracy/test/emotion", loss_emotion_test.mean(), epoch)
         
-            if best_accuracy <= accuracy[0]:
-                best_accuracy = accuracy[0]
-                save_dict = {
-                        "epoch": epoch,
-                        "model_state_dict": model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "accuracy": best_accuracy,
-                    }
-                save_path = "./wgt/user" + str(args.person_index) + "_" + str(epoch) + ".ckpt"
-                torch.save(save_dict, save_path)                   
+                # if best_accuracy <= accuracy_test[0]:
+                #     best_accuracy = accuracy_test[0]
+                #     save_dict = {
+                #             "epoch": epoch,
+                #             "model_state_dict": model.state_dict(),
+                #             "optimizer_state_dict": optimizer.state_dict(),
+                #             "accuracy": best_accuracy,
+                #         }
+                #     save_path = "./wgt/user" + str(args.person_index) + "_" + str(epoch) + ".ckpt"
+                #     torch.save(save_dict, save_path)                   
 
 
 if __name__=='__main__':

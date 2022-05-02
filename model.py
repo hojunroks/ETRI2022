@@ -63,20 +63,20 @@ class TransformerBased(nn.Module):
         self.decoder_action = nn.Linear(d_model, num_actions)
         self.decoder_emotion = nn.Linear(d_model, 1)
 
-        self.init_weights()
+
 
     def forward(self, src, src_mask):
         """
         Args:
-            src: Tensor, shape [seq_len, batch_size]
+            src: Tensor, shape [seq_len, batch_size, input_size]
             src_mask: Tensor, shape [seq_len, seq_len]
 
         """
         src = self.encoder(src) * math.sqrt(self.d_model)
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_mask)
-        output_action = self.decoder_action(output)
-        output_emotion = self.decoder_emotion(output)
+        output_action = self.decoder_action(output).squeeze()
+        output_emotion = self.decoder_emotion(output).squeeze()
         return output_action, output_emotion
 
 

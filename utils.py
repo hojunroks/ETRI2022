@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from model import generate_square_subsequent_mask
 from sklearn.metrics import f1_score, accuracy_score, jaccard_score
 
 def dfToTensor(df, list_attributes):
@@ -44,9 +45,10 @@ def top_k(logits, y, k : int = 1):
     acc = accuracy_score(y_pred, y)*100
     return acc
 
-def evaluate(model, test_data, test_label):
+def evaluate(model, test_data, test_label, seq_len):
     model.eval()
-    test_predict = model(test_data)
+    src_mask = generate_square_subsequent_mask(seq_len).to('cuda:0')
+    test_predict = model(test_data, src_mask)
     pred_act, pred_emotion = test_predict
 
     k_list = [1, 3, 5]

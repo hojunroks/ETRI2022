@@ -129,6 +129,9 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_ti
     else:
         data = (onehot_act, onehot_place, raw_emotion)
     x, y, y_emotion = sliding_window(data, onehot_act[1:], raw_emotion[1:], seq_length=3)
+    
+    print(x.shape)
+
 
     
     num_data = len(x)
@@ -143,6 +146,10 @@ def load_data_sequential(data_path, split_ratio=0.67, input_flag="multi", use_ti
     testY = Variable(torch.Tensor(np.array(y[train_size:len(y)]))).long()
     testY_emotion = Variable(torch.Tensor(np.array(y_emotion[train_size:len(y_emotion)]))).float()
     
+    print(trainX.shape)
+    print(trainY.shape)
+    print(trainY_emotion.shape)
+
     return trainX, trainY, trainY_emotion, testX, testY, testY_emotion
     
 
@@ -163,99 +170,80 @@ def sliding_window(data, label, label_emotion, seq_length):
         y_emotion.append(_y_emotion)
         seq_list.clear()
 
-    return np.array(x),np.array(y), np.array(y_emotion)
+    return np.array(x),np.array(y), np.array([y.item() for y in y_emotion])
 
 
-# def load_data_transformer(data_path, split_ratio=0.67, batch_size=64, use_timestamp=True):
-#     dir_list = os.listdir(data_path)
-#     user_all_data = []
+def load_data_transformer(data_path, split_ratio=0.67, use_timestamp=True):
+    dir_list = os.listdir(data_path)
+    user_all_data = []
 
-#     for item in dir_list:
-#         csv_file = data_path + "/" + item + "/" + item + "_label.csv"
-#         rdr = pd.read_csv(csv_file)
-#         user_all_data.append(rdr)
+    for item in dir_list:
+        csv_file = data_path + "/" + item + "/" + item + "_label.csv"
+        rdr = pd.read_csv(csv_file)
+        user_all_data.append(rdr)
 
 
-#     #df_all : 전체 data
-#     df_all = pd.concat(user_all_data, axis=0)
-#     df_all['ts']=pd.to_datetime(df_all['ts'], unit='s')
-#     df_all['is_weekend']=df_all.apply(lambda x: x['ts'].weekday()>=5, axis=1)
-#     df_all['ampm']=df_all.apply(lambda x: ["AM","PM"][x['ts'].hour//12], axis=1)
-#     df_all['time']=df_all.apply(lambda x: hourToLabel(x['ts'].hour), axis=1)
+    #df_all : 전체 data
+    df_all = pd.concat(user_all_data, axis=0)
+    df_all['ts']=pd.to_datetime(df_all['ts'], unit='s')
+    df_all['is_weekend']=df_all.apply(lambda x: x['ts'].weekday()>=5, axis=1)
+    df_all['ampm']=df_all.apply(lambda x: ["AM","PM"][x['ts'].hour//12], axis=1)
+    df_all['time']=df_all.apply(lambda x: hourToLabel(x['ts'].hour), axis=1)
 
-#     df_no_dup = df_all.drop_duplicates()
-#     #df_sort : 연속된 동일한 actionOption끼리 묶음
-#     diff_indices = [0]
-#     diff_index = 0
-#     df_sort = pd.DataFrame()
-#     for i in range(len(df_no_dup)):
-#         if(df_no_dup['actionOption'].values[i]!=df_no_dup['actionOption'].values[diff_index]):
-#             diff_index=i
-#             diff_indices.append(diff_index)
-#             df_sort = df_sort.append(pd.Series(df_no_dup.iloc[i], index=df_no_dup.columns), ignore_index=True)
+    df_no_dup = df_all.drop_duplicates()
+    #df_sort : 연속된 동일한 actionOption끼리 묶음
+    diff_indices = [0]
+    diff_index = 0
+    df_sort = pd.DataFrame()
+    for i in range(len(df_no_dup)):
+        if(df_no_dup['actionOption'].values[i]!=df_no_dup['actionOption'].values[diff_index]):
+            diff_index=i
+            diff_indices.append(diff_index)
+            df_sort = df_sort.append(pd.Series(df_no_dup.iloc[i], index=df_no_dup.columns), ignore_index=True)
 
-#     # onehot_actopt = indexToOneHot(dfToTensor(df_sort,['actionOption']))[0]
-#     onehot_act = indexToOneHot(dfToTensor(df_sort,['action']))[0]
-#     onehot_place = indexToOneHot(dfToTensor(df_sort,['place']))[0]
-#     raw_emotion = torch.from_numpy(np.array(df_sort['emotionPositive'] / 7.)).unsqueeze(dim=1)
-#     onehot_weekend = torch.unsqueeze(dfToTensor(df_sort,['is_weekend'])[0], dim=1)
-#     # onehot_time = indexToOneHot(dfToTensor(df_sort,['time']))[0]
-#     time = torch.unsqueeze(torch.Tensor([(x.hour/12-1) for x in list(df_sort['ts'])]), dim=1)
-#     # emotion_label = torch.argmax(Variable(torch.Tensor(np.array(onehot_emotion[1:]))), dim=-1)
+    # onehot_actopt = indexToOneHot(dfToTensor(df_sort,['actionOption']))[0]
+    onehot_act = indexToOneHot(dfToTensor(df_sort,['action']))[0]
+    onehot_place = indexToOneHot(dfToTensor(df_sort,['place']))[0]
+    raw_action = dfToTensor(df_sort,['action'])[0].unsqueeze(dim=1)
+    raw_emotion = torch.from_numpy(np.array(df_sort['emotionPositive'] / 7.)).unsqueeze(dim=1)
+    onehot_weekend = torch.unsqueeze(dfToTensor(df_sort,['is_weekend'])[0], dim=1)
+    # onehot_time = indexToOneHot(dfToTensor(df_sort,['time']))[0]
+    time = torch.unsqueeze(torch.Tensor([(x.hour/12-1) for x in list(df_sort['ts'])]), dim=1)
+    # emotion_label = torch.argmax(Variable(torch.Tensor(np.array(onehot_emotion[1:]))), dim=-1)
     
-#     if use_timestamp:
-#         data = (onehot_act, onehot_place, raw_emotion, onehot_weekend, time)
-#     else:
-#         data = (onehot_act, onehot_place, raw_emotion)
-#     data = batchify(data, batch_size) # N/bsz, bsz, input_size
+    if use_timestamp:
+        data = torch.cat([onehot_act, onehot_place, raw_emotion, onehot_weekend, time], dim=1)
+    else:
+        data = torch.cat([onehot_act, onehot_place, raw_emotion], dim=1)
+
+
+    trainX, trainY, trainY_emotion = get_batch(data, raw_action, raw_emotion, 10)
+    testX, testY, testY_emotion = get_batch(data, raw_action, raw_emotion, 10)
+
+    # testX = Variable(torch.Tensor(np.array(x[train_size:len(x)]))).unsqueeze(dim=0)
+    # testY = Variable(torch.Tensor(np.array(y[train_size:len(y)]))).long()
+    # testY_emotion = Variable(torch.Tensor(np.array(y_emotion[train_size:len(y_emotion)]))).float()
     
-
-
-    
-#     num_data = len(x)
-#     train_size = int(num_data*split_ratio)
-#     test_size = num_data-train_size
-
-#     trainX = Variable(torch.Tensor(np.array(x[0:train_size]))).unsqueeze(dim=0)
-#     trainY = Variable(torch.Tensor(np.array(y[0:train_size]))).long()
-#     trainY_emotion = Variable(torch.Tensor(np.array(y_emotion[0:train_size]))).float()
-
-#     testX = Variable(torch.Tensor(np.array(x[train_size:len(x)]))).unsqueeze(dim=0)
-#     testY = Variable(torch.Tensor(np.array(y[train_size:len(y)]))).long()
-#     testY_emotion = Variable(torch.Tensor(np.array(y_emotion[train_size:len(y_emotion)]))).float()
-    
-#     return trainX, trainY, trainY_emotion, testX, testY, testY_emotion
+    return trainX, trainY, trainY_emotion, testX, testY, testY_emotion
     
 
+def get_batch(data, action_label, emotion_label, bptt):
+    """
+    Args:
+        source: Tensor, shape [full_seq_len, input_size]
 
-# def batchify(data, bsz):
-#     """Divides the data into bsz separate sequences, removing extra elements
-#     that wouldn't cleanly fit.
-
-#     Args:
-#         data: Tensor, shape [N,input_size]
-#         bsz: int, batch size
-
-#     Returns:
-#         Tensor of shape [N // bsz, bsz]
-#     """
-#     seq_len = data.size[0] // bsz
-#     data = data[:seq_len * bsz]
-#     data = data.view(bsz, seq_len, -1).transpose(0,1).contiguous()
-#     return data
-
-# bptt = 35
-# def get_batch(source, i):
-#     """
-#     Args:
-#         source: Tensor, shape [full_seq_len, batch_size]
-#         i: int
-
-#     Returns:
-#         tuple (data, target), where data has shape [seq_len, batch_size] and
-#         target has shape [seq_len * batch_size]
-#     """
-#     seq_len = min(bptt, len(source) - 1 - i)
-#     data = source[i:i+seq_len]
-#     target = source[i+1:i+1+seq_len].reshape(-1)
-#     return data, target
+    Returns:
+        tuple (data, target), where data has shape [seq_len, input_size] and
+        target has shape [seq_len * input_size]
+    """
+    num_batches = len(data)-1-bptt
+    seq_len = bptt
+    x = Variable(torch.Tensor(num_batches, seq_len, data.shape[1]))
+    action = Variable(torch.Tensor(num_batches, seq_len))
+    emotion = Variable(torch.Tensor(num_batches, seq_len))
+    for i in range(num_batches):
+        x[i] = data[i:i+seq_len]
+        action[i] = action_label[i+1:i+1+seq_len].squeeze()
+        emotion[i] = emotion_label[i+1:i+1+seq_len].squeeze()
+    
+    return x, action, emotion
