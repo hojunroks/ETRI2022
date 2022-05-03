@@ -75,8 +75,10 @@ class TransformerBased(nn.Module):
         src = self.encoder(src) * math.sqrt(self.d_model)
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_mask)
-        output_action = self.decoder_action(output).squeeze()
-        output_emotion = self.decoder_emotion(output).squeeze()
+        output_action = self.decoder_action(output).squeeze(dim=1)
+        # print(output_action.shape)
+        output_emotion = self.decoder_emotion(output).squeeze(dim=1)
+        # print(output_emotion.shape)
         return output_action, output_emotion
 
 

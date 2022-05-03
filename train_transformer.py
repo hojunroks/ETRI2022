@@ -42,7 +42,7 @@ def main():
     print(data_path)
     # train_feat, train_label, test_feat, test_label = load_data(os.path.join(args.data_dir, data_path), split_ratio=args.split_ratio, input_flag="multi")  # act_place_emo
     data_path = os.path.join(args.data_dir, data_path)
-    train_feat, train_label, train_label_emotion, test_feat, test_label, test_label_emotion = load_data_transformer(data_path, split_ratio=args.split_ratio)
+    train_feat, train_label, train_label_emotion, test_feat, test_label, test_label_emotion = load_data_transformer(data_path, split_ratio=args.split_ratio, seq_len=args.sequence_length)
     with torch.cuda.device(0):
         train_feat = train_feat.cuda()
         test_feat = test_feat.cuda()
@@ -101,9 +101,9 @@ def main():
         writer.add_scalar("Accuracy/train/top-3", accuracy_total[1], epoch)
         writer.add_scalar("Accuracy/train/top-1", accuracy_total[0], epoch)
         writer.add_scalar("Accuracy/train/emotion", loss_emotion_total.mean(), epoch)
-        
         if epoch % args.test_every == 0:
             with torch.no_grad():
+                src_mask = generate_square_subsequent_mask(args.sequence_length).to('cuda:0')
                 model.eval()
                 loss_act_test=[]
                 loss_emotion_test=[]

@@ -173,7 +173,7 @@ def sliding_window(data, label, label_emotion, seq_length):
     return np.array(x),np.array(y), np.array([y.item() for y in y_emotion])
 
 
-def load_data_transformer(data_path, split_ratio=0.67, use_timestamp=True):
+def load_data_transformer(data_path, split_ratio=0.67, use_timestamp=True, seq_len=10):
     dir_list = os.listdir(data_path)
     user_all_data = []
 
@@ -211,14 +211,21 @@ def load_data_transformer(data_path, split_ratio=0.67, use_timestamp=True):
     time = torch.unsqueeze(torch.Tensor([(x.hour/12-1) for x in list(df_sort['ts'])]), dim=1)
     # emotion_label = torch.argmax(Variable(torch.Tensor(np.array(onehot_emotion[1:]))), dim=-1)
     
+    num_data = len(onehot_act)
+    train_size = int(num_data*split_ratio)
+
     if use_timestamp:
-        data = torch.cat([onehot_act, onehot_place, raw_emotion, onehot_weekend, time], dim=1)
+        data_train = torch.cat([onehot_act[:train_size], onehot_place[:train_size], raw_emotion[:train_size], onehot_weekend[:train_size], time[:train_size]], dim=1)
+        data_test = torch.cat([onehot_act[train_size:], onehot_place[train_size:], raw_emotion[train_size:], onehot_weekend[train_size:], time[train_size:]], dim=1)
     else:
-        data = torch.cat([onehot_act, onehot_place, raw_emotion], dim=1)
+        data_train = torch.cat([onehot_act[:train_size], onehot_place[:train_size], raw_emotion[:train_size]], dim=1)
+        data_test = torch.cat([onehot_act[train_size:], onehot_place[train_size:], raw_emotion[train_size:]], dim=1)
 
+    
 
-    trainX, trainY, trainY_emotion = get_batch(data, raw_action, raw_emotion, 10)
-    testX, testY, testY_emotion = get_batch(data, raw_action, raw_emotion, 10)
+    trainX, trainY, trainY_emotion = get_batch(data_train, raw_action, raw_emotion, seq_len)
+    
+    testX, testY, testY_emotion = get_batch(data_test, raw_action, raw_emotion, seq_len)
 
     # testX = Variable(torch.Tensor(np.array(x[train_size:len(x)]))).unsqueeze(dim=0)
     # testY = Variable(torch.Tensor(np.array(y[train_size:len(y)]))).long()
