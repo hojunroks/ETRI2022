@@ -20,13 +20,15 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('--data_dir', type=str, default="/data/etri_lifelog")
     parser.add_argument('--person_index', type=int, default=1)
-    parser.add_argument('--num_epochs', type=int, default=5000)
+    parser.add_argument('--num_epochs', type=int, default=200)
     parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--weight_decay', type=float, default=0.001)
-    parser.add_argument('--hidden_size', type=int, default=128)
-    parser.add_argument('--num_layers', type=int, default=2)
+    parser.add_argument('--d_hid', type=int, default=16)
+    parser.add_argument('--d_model', type=int, default=16)
+    parser.add_argument('--nhead', type=int, default=8)
+    parser.add_argument('--nlayers', type=int, default=3)
     parser.add_argument('--bidirectional', type=bool, default=False)
-    parser.add_argument('--test_every', type=int, default=200)
+    parser.add_argument('--test_every', type=int, default=5)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--split_ratio', type=float, default=0.67)
     parser.add_argument('--use_timestamp', type=bool, default=False)
@@ -54,7 +56,7 @@ def main():
     ########### INITIALIZE MODEL ###########
     input_size = train_feat.shape[-1]
     num_classes = 16    # train_feat.shape[-1]
-    model = TransformerBased(input_size, 32, 8, 64, 8, num_classes).to('cuda:0')
+    model = TransformerBased(input_size, args.d_model, args.nhead, args.d_hid, args.nlayers, num_classes).to('cuda:0')
     #classfication
     criterion = nn.CrossEntropyLoss()
     criterion_emotion = nn.HuberLoss() # L1Loss or HuberLoss()
