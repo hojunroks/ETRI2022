@@ -1,10 +1,10 @@
 import torch
+import numpy as np
 import torch.nn.functional as F
 from model import generate_square_subsequent_mask
 from sklearn.metrics import f1_score, accuracy_score, jaccard_score
 
 def dfToTensor(df, list_attributes):
-    # 한 사람의 전체 label dataframe과 index tensor로 만들고 싶은 attribute들의 리스트를 입력해주면 각각의 index tensor들이 담긴 list를 반환
     attribute_tensors = []
     for attribute in list_attributes:
         type_attributes = list(df[attribute].drop_duplicates())
@@ -13,7 +13,6 @@ def dfToTensor(df, list_attributes):
     return attribute_tensors
 
 def indexToOneHot(attribute_tensors):
-    # index tensor들이 담긴 list를 입력해주면 one hot으로 변환한 tensor들을 담은 list를 반환
     return([F.one_hot(x) for x in attribute_tensors])
 
 def top_k(logits, y, k : int = 1):
@@ -45,18 +44,28 @@ def top_k(logits, y, k : int = 1):
     acc = accuracy_score(y_pred, y)*100
     return acc
 
-def evaluate(model, test_data, test_label, seq_len):
+def evaluate(model, test_data, act_label, emo_label, seq_len, model_name):
     model.eval()
-    src_mask = generate_square_subsequent_mask(seq_len).to('cuda:0')
-    test_predict = model(test_data, src_mask)
-    pred_act, pred_emotion = test_predict
-
+    
+    if model_name == 'transformer':
+        src_mask = generate_square_subsequent_mask(seq_len).to('cuda:0')
+        test_predict = model(test_data, src_mask)
+    else:
+        test_predict = model(test_data)
+        
+    pred_act, pred_emo = test_predict
+    pred_emo = (pred_emo*7).round()
+    emo_label = emo_label*7
+    
     k_list = [1, 3, 5]
-    accu_list = []
+    act_accu_list = []
+    emo_accu_list = []
     
     for k in k_list:
-        accu_list.append(top_k(pred_act.cpu(), test_label.cpu(), k))
-    return accu_list
+        act_accu_list.append(top_k(pred_act.cpu(), act_label.cpu(), k))
+
+    emo_accu_list.append(accuracy_score(pred_emo.detach().cpu(), emo_label.cpu())*100)
+    return np.array(act_accu_list), np.array(emo_accu_list)
 
 def hourToLabel(hour):
     if hour<=9:

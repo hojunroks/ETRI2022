@@ -4,6 +4,8 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
+## TODO: develop Linear model (FC*1, FC*2)
+
 class LSTM(nn.Module):
     def __init__(self, num_classes, input_size, hidden_size, num_layers, bidirectional_flag, dropout=0.2, emo_classes=1, device=0):
         super(LSTM, self).__init__()
@@ -62,8 +64,6 @@ class TransformerBased(nn.Module):
         self.d_model = d_model
         self.decoder_action = nn.Linear(d_model, num_actions)
         self.decoder_emotion = nn.Linear(d_model, 1)
-
-
 
     def forward(self, src, src_mask):
         """
