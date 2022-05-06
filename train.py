@@ -1,4 +1,4 @@
-from model import LSTM, TransformerBased
+from model import LSTM, TransformerBased, MLP
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
@@ -55,7 +55,12 @@ def main():
 
     ########### INITIALIZE MODEL ###########
     input_size = train_feat.shape[-1]
-    model = LSTM(num_classes, input_size, args.hidden_size, args.num_layers, bidirectional_flag=args.bidirectional, dropout=args.dropout).to(0)
+    if args.model_name=='lstm':
+        model = LSTM(num_classes, input_size, args.hidden_size, args.num_layers, bidirectional_flag=args.bidirectional, dropout=args.dropout).to(0)
+    elif args.model_name=='MLP':
+        model = MLP(num_classes, input_size, args.hidden_size, args.num_layers, args.dropout).to(0)
+        train_feat = train_feat.squeeze()
+        test_feat = test_feat.squeeze()
     criterion = nn.CrossEntropyLoss()
     criterion_emotion = nn.HuberLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -88,6 +93,7 @@ def main():
         writer.add_scalar("Accuracy/train/act-top-1", act_accu[0], epoch)
         writer.add_scalar("Accuracy/train/emo-top-1", emo_accu[0], epoch)
         
+        # print("Test")
         if epoch % args.test_every == 0:
             with torch.no_grad():
                 model.eval()
