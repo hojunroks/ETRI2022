@@ -91,6 +91,23 @@ def load_data(data_path, act_flag='actopt', emo_rttype='raw'):
     
     return onehot_act, raw_act, onehot_place, raw_emotion, onehot_weekend, time
 
+def load_data_mlp(data_path, split_ratio=0.67, act_flag='actopt', use_timestamp=True):
+    onehot_act, raw_act, onehot_place, raw_emotion, onehot_weekend, time = load_data(data_path, act_flag)
+    num_data = len(onehot_act)
+    num_action = onehot_act.shape[-1]
+    train_size = int(num_data*split_ratio)
+    if use_timestamp:
+        data = torch.cat([onehot_act, onehot_place, raw_emotion, onehot_weekend, time], dim=1)
+    else:
+        data = torch.cat([onehot_act, onehot_place, raw_emotion], dim=1)
+    trainX = data[:train_size].float()
+    trainY = raw_act[1:train_size+1].long().squeeze()
+    trainY_emotion = raw_emotion[1:train_size+1].float().squeeze()
+    testX = data[train_size:-1].float()
+    testY = raw_act[train_size+1:].long().squeeze()
+    testY_emotion = raw_emotion[train_size+1:].float().squeeze()
+    print(trainX.shape, trainY.shape, trainY_emotion.shape)
+    return trainX, trainY, trainY_emotion, testX, testY, testY_emotion, num_action
 
 def load_data_sequential(data_path, split_ratio=0.67, act_flag='actopt', use_timestamp=True, seq_len=10):
     onehot_act, raw_act, onehot_place, raw_emotion, onehot_weekend, time = load_data(data_path, act_flag)
