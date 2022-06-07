@@ -4,6 +4,18 @@
 ## Setup
     # Install python dependencies
     pip install -r requirements.txt
+    
+## 데이터셋
+아래 링크의 데이터 파일 다운로드
+
+https://nanum.etri.re.kr/share/schung1/ETRILifelogDataset2020?lang=ko_KR
+
+사용된 데이터 파일 목록
+- user01-06 data
+- user07-10 data
+- user11-12 data
+- user21-25 data
+- user26-30 data
 
 ## 데이터 전처리 내용
 
