@@ -9,6 +9,7 @@
 아래 링크의 데이터 파일 다운로드
 
 ETRI 라이프로그 데이터셋
+
 https://nanum.etri.re.kr/share/schung1/ETRILifelogDataset2020?lang=ko_KR
 
 사용된 데이터 파일 목록
