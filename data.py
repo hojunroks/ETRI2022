@@ -24,7 +24,7 @@ def sliding_window(data, label, label_emotion, seq_length):
         y_emotion.append(_y_emotion)
         seq_list.clear()
 
-    return np.array(x),np.array(y), np.array([y.item() for y in y_emotion])
+    return np.array(x), np.array(y), np.array([y.item() for y in y_emotion])
 
 def get_batch(data, action_label, emotion_label, bptt):
     """
@@ -35,7 +35,8 @@ def get_batch(data, action_label, emotion_label, bptt):
         tuple (data, target), where data has shape [seq_len, input_size] and
         target has shape [seq_len * input_size]
     """
-    num_batches = len(data)-1-bptt
+#     num_batches = len(data)-1-bptt
+    num_batches = len(data)-bptt
     seq_len = bptt
     x = Variable(torch.Tensor(num_batches, seq_len, data.shape[1]))
     action = Variable(torch.Tensor(num_batches, seq_len))
@@ -72,6 +73,7 @@ def load_data(data_path, act_flag='actopt', emo_rttype='raw'):
             diff_indices.append(diff_index)
             df_sort = df_sort.append(pd.Series(df_no_dup.iloc[i], index=df_no_dup.columns), ignore_index=True)
 
+    import pudb; pudb.set_trace()
     if act_flag == 'actopt':
         onehot_act = indexToOneHot(dfToTensor(df_sort,['actionOption']))[0]
         raw_act = dfToTensor(df_sort,['actionOption'])[0].unsqueeze(dim=1)
@@ -96,10 +98,12 @@ def load_data_mlp(data_path, split_ratio=0.67, act_flag='actopt', use_timestamp=
     num_data = len(onehot_act)
     num_action = onehot_act.shape[-1]
     train_size = int(num_data*split_ratio)
+
     if use_timestamp:
         data = torch.cat([onehot_act, onehot_place, raw_emotion, onehot_weekend, time], dim=1)
     else:
         data = torch.cat([onehot_act, onehot_place, raw_emotion], dim=1)
+
     trainX = data[:train_size].float()
     trainY = raw_act[1:train_size+1].long().squeeze()
     trainY_emotion = raw_emotion[1:train_size+1].float().squeeze()
@@ -109,7 +113,7 @@ def load_data_mlp(data_path, split_ratio=0.67, act_flag='actopt', use_timestamp=
     print(trainX.shape, trainY.shape, trainY_emotion.shape)
     return trainX, trainY, trainY_emotion, testX, testY, testY_emotion, num_action
 
-def load_data_sequential(data_path, split_ratio=0.67, act_flag='actopt', use_timestamp=True, seq_len=10):
+def load_data_lstm(data_path, split_ratio=0.67, act_flag='actopt', use_timestamp=True, seq_len=10):
     onehot_act, raw_act, onehot_place, raw_emotion, onehot_weekend, time = load_data(data_path, act_flag)
 
     if use_timestamp:
@@ -151,7 +155,7 @@ def load_data_transformer(data_path, split_ratio=0.67, act_flag='actopt', use_ti
         data_train = torch.cat([onehot_act[:train_size], onehot_place[:train_size], raw_emotion[:train_size]], dim=1)
         data_test = torch.cat([onehot_act[train_size:], onehot_place[train_size:], raw_emotion[train_size:]], dim=1)
 
-    trainX, trainY, trainY_emotion = get_batch(data_train, raw_act, raw_emotion, seq_len)
-    testX, testY, testY_emotion = get_batch(data_test, raw_act, raw_emotion, seq_len)
+    trainX, trainY, trainY_emotion = get_batch(data_train, raw_act[:train_size], raw_emotion[:train_size], seq_len)
+    testX, testY, testY_emotion = get_batch(data_test, raw_act[train_size:], raw_emotion[train_size:], seq_len)
     
     return trainX, trainY, trainY_emotion, testX, testY, testY_emotion, num_action

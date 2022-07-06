@@ -4,9 +4,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 import os
-from data import load_data, load_data_sequential, load_data_transformer
+from data import load_data, load_data_lstm, load_data_transformer
 from argparse import ArgumentParser
-from utils import evaluate
+from utils import evaluate, fix_seed
 from torch.utils.tensorboard import SummaryWriter
 
 import datetime
@@ -21,7 +21,8 @@ def main():
     parser.add_argument('--data_dir', type=str, default="/data/etri_lifelog")
     parser.add_argument('--act_flag', type=str, default="act")
     parser.add_argument('--person_index', type=int, default=28)
-    parser.add_argument('--num_epochs', type=int, default=100)
+    parser.add_argument('--seed', type=int, default=41)
+    parser.add_argument('--num_epochs', type=int, default=300)
     parser.add_argument('--lr', type=float, default=0.00001)
     parser.add_argument('--weight_decay', type=float, default=0.01)
     parser.add_argument('--d_hid', type=int, default=16)
@@ -40,6 +41,7 @@ def main():
 
     ############## LOAD DATA ##############
     
+    fix_seed(args.seed)
     person_dir_index = 0
     while person_dir_index < len(PERSON_DIRS) and PERSON_DIRS[person_dir_index] < args.person_index:
         person_dir_index += 1
@@ -67,9 +69,9 @@ def main():
     now = datetime.datetime.now()
     nowDate = now.strftime('%Y-%m-%d-%H:%M:%S')
     if args.sche == True:
-        exp_name = 'USER_%s_c%s_dh%s_dm%s_he%s_l%s_lr%s_wd%s_dr%s_g%s_s%s'%(args.person_index, num_classes, args.d_hid, args.d_model, args.nhead, args.nlayers, args.lr, args.weight_decay, args.dropout, args.gamma, args.sequence_length)
+        exp_name = 'USER_%s_c%s_dh%s_dm%s_he%s_l%s_lr%s_wd%s_dr%s_g%s_s%s_es%s_fin_mep300'%(args.person_index, num_classes, args.d_hid, args.d_model, args.nhead, args.nlayers, args.lr, args.weight_decay, args.dropout, args.gamma, args.sequence_length, args.seed)
     else:
-        exp_name = 'USER_%s_c%s_dh%s_dm%s_he%s_l%s_lr%s_wd%s_dr%s_nosche_s%s'%(args.person_index, num_classes, args.d_hid, args.d_model, args.nhead, args.nlayers, args.lr, args.weight_decay, args.dropout, args.sequence_length)
+        exp_name = 'USER_%s_c%s_dh%s_dm%s_he%s_l%s_lr%s_wd%s_dr%s_nosche_s%s_es%s_fin_mep300'%(args.person_index, num_classes, args.d_hid, args.d_model, args.nhead, args.nlayers, args.lr, args.weight_decay, args.dropout, args.sequence_length, args.seed)
     writer = SummaryWriter('runs/'+exp_name)
 
     ################ TRAIN #################
@@ -124,12 +126,12 @@ def main():
                 act_accu_test = []
                 emo_accu_test = []
 
-                for i in range(len(test_feat)):
+                for i in range(len(test_feat)): # [#samples, #n_classes, #feat_dim]
                     test_pred = model(test_feat[i].unsqueeze(dim=1), src_mask)
-                    pred_act, pred_emotion = test_pred
+                    pred_act, pred_emotion = test_pred # pred_act: [#seq_len, #n_class]
                     loss_act_test.append(criterion(pred_act, label_act_test[i].type(torch.LongTensor).to('cuda:0')).item())
                     loss_emo_test.append(criterion_emotion(pred_emotion.squeeze(), label_emotion_test[i]).item())
-                    
+
                     act_accu, emo_accu = evaluate(model, test_feat[i].unsqueeze(dim=1), label_act_test[i], label_emotion_test[i], args.sequence_length, args.model_name)
                     act_accu_test.append(act_accu)
                     emo_accu_test.append(emo_accu)

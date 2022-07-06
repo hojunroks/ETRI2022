@@ -130,3 +130,6 @@ dmypy.json
 
 # tensorboard logs
 runs/
+ensemble/
+output
+prediction

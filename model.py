@@ -76,12 +76,9 @@ class MLP(nn.Module):
         out_emotion = self.emotion(x)
         return out_act, out_emotion
 
-
-
-
 class TransformerBased(nn.Module):
     def __init__(self, input_size: int, d_model: int, nhead: int, d_hid: int,
-                nlayers: int, num_actions: int, dropout: float = 0.5):
+                nlayers: int, num_actions: int, dropout: float = 0.5, num_emo_classes: int = 1):
         super().__init__()
         self.model_type = 'Transformer'
         self.pos_encoder = PositionalEncoding(d_model, dropout)
@@ -90,7 +87,7 @@ class TransformerBased(nn.Module):
         self.encoder = nn.Linear(input_size, d_model)
         self.d_model = d_model
         self.decoder_action = nn.Linear(d_model, num_actions)
-        self.decoder_emotion = nn.Linear(d_model, 1)
+        self.decoder_emotion = nn.Linear(d_model, num_emo_classes)
 
     def forward(self, src, src_mask):
         """
