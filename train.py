@@ -1,10 +1,10 @@
-from model import LSTM, TransformerBased
+from model import LSTM, TransformerBased, MLP
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import numpy as np
 import os
-from data import load_data, load_data_sequential
+from data import load_data, load_data_lstm, load_data_mlp
 from argparse import ArgumentParser
 from utils import evaluate
 from torch.utils.tensorboard import SummaryWriter
@@ -43,8 +43,11 @@ def main():
     print(data_path)
 
     data_path = os.path.join(args.data_dir, data_path)
-    train_feat, train_label, train_label_emotion, test_feat, test_label, test_label_emotion, num_classes = load_data_sequential(data_path, split_ratio=args.split_ratio, act_flag=args.act_flag, seq_len=args.sequence_length)
-    
+    if args.model_name=='lstm':
+        train_feat, train_label, train_label_emotion, test_feat, test_label, test_label_emotion, num_classes = load_data_lstm(data_path, split_ratio=args.split_ratio, act_flag=args.act_flag, seq_len=args.sequence_length)
+    elif args.model_name=='MLP':
+        train_feat, train_label, train_label_emotion, test_feat, test_label, test_label_emotion, num_classes = load_data_mlp(data_path, split_ratio=args.split_ratio, act_flag=args.act_flag)
+   
     with torch.cuda.device(0):
         train_feat = train_feat.cuda()
         test_feat = test_feat.cuda()
@@ -55,14 +58,21 @@ def main():
 
     ########### INITIALIZE MODEL ###########
     input_size = train_feat.shape[-1]
-    model = LSTM(num_classes, input_size, args.hidden_size, args.num_layers, bidirectional_flag=args.bidirectional, dropout=args.dropout).to(0)
+    if args.model_name=='lstm':
+        model = LSTM(num_classes, input_size, args.hidden_size, args.num_layers, bidirectional_flag=args.bidirectional, dropout=args.dropout).to(0)
+    elif args.model_name=='MLP':
+        model = MLP(num_classes, input_size, args.hidden_size, args.num_layers, args.dropout).to(0)
+
     criterion = nn.CrossEntropyLoss()
     criterion_emotion = nn.HuberLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     now = datetime.datetime.now()
     nowDate = now.strftime('%Y-%m-%d-%H:%M:%S')
-    exp_name = 'LSTM_USER_%s_c%s_lr%s_wd%s_dr%s'%(args.person_index, num_classes, args.lr, args.weight_decay, args.dropout)
+    if args.model_name == 'lstm':
+        exp_name = 'LSTM_USER_%s_c%s_lr%s_wd%s_dr%s_bi_s%s'%(args.person_index, num_classes, args.lr, args.weight_decay, args.dropout, args.sequence_length)
+    elif args.model_name == 'mlp':
+        exp_name = 'MLP_USER_%s_c%s_lr%s_wd%s_dr%s_bi_s%s'%(args.person_index, num_classes, args.lr, args.weight_decay, args.dropout, args.sequence_length)
     writer = SummaryWriter('runs/'+exp_name)
     
     ################ TRAIN #################

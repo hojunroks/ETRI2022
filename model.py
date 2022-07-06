@@ -52,9 +52,34 @@ class LSTM(nn.Module):
         return out
 
 
+class MLP(nn.Module):
+    def __init__(self, num_classes, input_size, hidden_size, num_layers, dropout=0.5, emo_classes=1):
+        super().__init__()
+        layers = [
+            nn.Linear(input_size, hidden_size),
+            nn.ReLU(),
+            nn.Dropout(dropout)
+        ]
+        for i in range(num_layers-1):
+            layers.append(nn.Linear(hidden_size, hidden_size))
+            layers.append(nn.ReLU())
+            layers.append(nn.Dropout(dropout))
+        self.encoder = nn.Sequential(
+            *layers
+        )
+        self.action = nn.Linear(hidden_size, num_classes)
+        self.emotion = nn.Linear(hidden_size, emo_classes)
+
+    def forward(self, x):
+        x = self.encoder(x)
+        out_act = self.action(x)
+        out_emotion = self.emotion(x)
+        return out_act, out_emotion
+
+    
 class TransformerBased(nn.Module):
     def __init__(self, input_size: int, d_model: int, nhead: int, d_hid: int,
-                nlayers: int, num_actions: int, dropout: float = 0.5):
+                nlayers: int, num_actions: int, dropout: float = 0.5, num_emo_classes: int = 1):
         super().__init__()
         self.model_type = 'Transformer'
         self.pos_encoder = PositionalEncoding(d_model, dropout)
@@ -63,7 +88,7 @@ class TransformerBased(nn.Module):
         self.encoder = nn.Linear(input_size, d_model)
         self.d_model = d_model
         self.decoder_action = nn.Linear(d_model, num_actions)
-        self.decoder_emotion = nn.Linear(d_model, 1)
+        self.decoder_emotion = nn.Linear(d_model, num_emo_classes)
 
     def forward(self, src, src_mask):
         """

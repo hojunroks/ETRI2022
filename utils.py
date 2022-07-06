@@ -1,10 +1,23 @@
+import os
 import torch
+import random
 import numpy as np
 import torch.nn.functional as F
 from model import generate_square_subsequent_mask
 from sklearn.metrics import f1_score, accuracy_score, jaccard_score
 
+def fix_seed(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    random.seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    
 def dfToTensor(df, list_attributes):
+    import pudb; pudb.set_trace()
     attribute_tensors = []
     for attribute in list_attributes:
         type_attributes = list(df[attribute].drop_duplicates())
@@ -56,6 +69,12 @@ def evaluate(model, test_data, act_label, emo_label, seq_len, model_name):
     pred_act, pred_emo = test_predict
     pred_emo = (pred_emo*7).round()
     emo_label = emo_label*7
+    if model_name == 'transformer':
+        # extend batch_dim
+        pred_act = pred_act[-1].unsqueeze(0)
+        act_label = act_label[-1].unsqueeze(0)
+        pred_emo = pred_emo[-1].unsqueeze(0)
+        emo_label = emo_label[-1].unsqueeze(0)
     
     k_list = [1, 3, 5]
     act_accu_list = []
@@ -63,7 +82,6 @@ def evaluate(model, test_data, act_label, emo_label, seq_len, model_name):
     
     for k in k_list:
         act_accu_list.append(top_k(pred_act.cpu(), act_label.cpu(), k))
-
     emo_accu_list.append(accuracy_score(pred_emo.detach().cpu(), emo_label.cpu())*100)
     return np.array(act_accu_list), np.array(emo_accu_list)
 
