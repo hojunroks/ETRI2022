@@ -98,15 +98,12 @@ def load_data_mlp(data_path, split_ratio=0.67, act_flag='actopt', use_timestamp=
     num_data = len(onehot_act)
     num_action = onehot_act.shape[-1]
     train_size = int(num_data*split_ratio)
-    
+
     if use_timestamp:
         data = torch.cat([onehot_act, onehot_place, raw_emotion, onehot_weekend, time], dim=1)
     else:
         data = torch.cat([onehot_act, onehot_place, raw_emotion], dim=1)
 
-    print ('num_data: ', data.shape[0])
-    print ('num_action: ', num_action)
-    
     trainX = data[:train_size].float()
     trainY = raw_act[1:train_size+1].long().squeeze()
     trainY_emotion = raw_emotion[1:train_size+1].float().squeeze()

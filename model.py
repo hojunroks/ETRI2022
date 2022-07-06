@@ -76,7 +76,6 @@ class MLP(nn.Module):
         out_emotion = self.emotion(x)
         return out_act, out_emotion
 
-    
 class TransformerBased(nn.Module):
     def __init__(self, input_size: int, d_model: int, nhead: int, d_hid: int,
                 nlayers: int, num_actions: int, dropout: float = 0.5, num_emo_classes: int = 1):

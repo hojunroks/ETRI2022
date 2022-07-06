@@ -98,6 +98,7 @@ def main():
         writer.add_scalar("Accuracy/train/act-top-1", act_accu[0], epoch)
         writer.add_scalar("Accuracy/train/emo-top-1", emo_accu[0], epoch)
         
+        # print("Test")
         if epoch % args.test_every == 0:
             with torch.no_grad():
                 model.eval()
